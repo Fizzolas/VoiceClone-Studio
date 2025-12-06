@@ -3,7 +3,7 @@
 <div align="center">
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
-![Python](https://img.shields.io/badge/python-3.10%2B-blue.svg)
+![Python](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12-blue.svg)
 ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-lightgrey.svg)
 
 **Open-source voice cloning software with real-time training and intuitive GUI**
@@ -78,13 +78,48 @@ VoiceClone Studio is a user-friendly, open-source application that allows anyone
 
 ### Prerequisites
 
-- **Python 3.10 or higher**
+- **Python 3.10, 3.11, or 3.12** (Python 3.13+ not yet fully supported)
 - **4GB+ RAM** (8GB recommended for real-time training)
 - **2GB free disk space**
 - **Microphone** (for live recording)
 - **GPU** (optional, but strongly recommended for faster training)
- - NVIDIA GPU with CUDA support
- - AMD GPU with ROCm support
+ - NVIDIA GPU with CUDA 12.1 or 12.4
+ - AMD GPU with ROCm 6.2+ support
+ - Apple Silicon (M1/M2/M3) with Metal acceleration
+
+### System Dependencies
+
+Before installing, you may need these system packages:
+
+**Windows:**
+- No additional packages required (dependencies bundled with Python)
+- Optional: [espeak-ng](https://github.com/espeak-ng/espeak-ng/releases) for phonemizer support
+- Optional: Microsoft Visual C++ Build Tools for PyAudio
+
+**macOS:**
+```bash
+# Install Homebrew if not already installed
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+
+# Install dependencies
+brew install portaudio espeak-ng
+```
+
+**Linux (Ubuntu/Debian):**
+```bash
+sudo apt-get update
+sudo apt-get install -y portaudio19-dev espeak-ng python3-dev build-essential
+```
+
+**Linux (Fedora/RHEL):**
+```bash
+sudo dnf install portaudio-devel espeak-ng python3-devel gcc gcc-c++
+```
+
+**Linux (Arch):**
+```bash
+sudo pacman -S portaudio espeak-ng base-devel
+```
 
 ### Quick Install
 
@@ -95,7 +130,7 @@ VoiceClone Studio is a user-friendly, open-source application that allows anyone
 git clone https://github.com/Fizzolas/VoiceClone-Studio.git
 cd VoiceClone-Studio
 
-# Run the installer
+# Run the installer (automatically detects GPU and installs appropriate PyTorch)
 install.bat
 ```
 
@@ -111,7 +146,17 @@ chmod +x install.sh
 ./install.sh
 ```
 
+The installer will:
+1. Check Python version (3.10-3.12)
+2. Create a virtual environment
+3. Detect your GPU and install appropriate PyTorch version
+4. Install all dependencies
+5. Set up directory structure
+6. Create configuration file
+
 ### Manual Installation
+
+If you prefer manual control:
 
 ```bash
 # Create virtual environment
@@ -123,11 +168,50 @@ venv\Scripts\activate
 # Linux/macOS:
 source venv/bin/activate
 
-# Install dependencies
+# Upgrade pip
+pip install --upgrade pip setuptools wheel
+
+# Install PyTorch (choose ONE based on your hardware):
+
+# CPU only:
+pip install torch torchaudio
+
+# NVIDIA GPU with CUDA 12.4 (RTX 40-series, RTX 4090, etc.):
+pip install torch torchaudio --index-url https://download.pytorch.org/whl/cu124
+
+# NVIDIA GPU with CUDA 12.1 (RTX 30-series, RTX 3080, etc.):
+pip install torch torchaudio --index-url https://download.pytorch.org/whl/cu121
+
+# AMD GPU with ROCm 6.2:
+pip install torch torchaudio --index-url https://download.pytorch.org/whl/rocm6.2
+
+# macOS (includes Metal acceleration for Apple Silicon):
+pip install torch torchaudio
+
+# Install remaining dependencies
 pip install -r requirements.txt
 
-# Download pre-trained base models
-python scripts/download_models.py
+# Create directories
+mkdir -p data/{recordings,uploads,cache} models/{base,user} logs
+
+# Copy configuration
+cp config.template.yaml config.yaml
+```
+
+### Verify Installation
+
+```bash
+# Activate virtual environment
+source venv/bin/activate  # or venv\Scripts\activate on Windows
+
+# Check PyTorch and CUDA
+python -c "import torch; print('PyTorch:', torch.__version__); print('CUDA available:', torch.cuda.is_available())"
+
+# Check GUI library
+python -c "import PyQt6; print('PyQt6: OK')"
+
+# Check audio library
+python -c "import sounddevice; print('sounddevice: OK')"
 ```
 
 ---
@@ -137,10 +221,12 @@ python scripts/download_models.py
 ### Launch the Application
 
 ```bash
+# Activate virtual environment (if not already active)
+source venv/bin/activate  # or venv\Scripts\activate on Windows
+
+# Start the GUI
 python main.py
 ```
-
-Or use the desktop shortcut created during installation.
 
 ### First-Time Setup
 
@@ -192,15 +278,15 @@ Or use the desktop shortcut created during installation.
 ### Main Window
 
 ```
-┌─────────────────────────────────────────────────────────────┐
+┌───────────────────────────────────────────────────────────┐
 │  VoiceClone Studio                                    [_][□][X]│
-├─────────────────────────────────────────────────────────────┤
+├───────────────────────────────────────────────────────────┤
 │  File  Edit  Training  Generate  Models  Help                │
-├─────────────────────────────────────────────────────────────┤
+├───────────────────────────────────────────────────────────┤
 │                                                               │
 │  Voice Profile: [Select Profile ▼]  [New] [Load] [Delete]   │
 │                                                               │
-│  ┌───────────────────┬───────────────────────────────────┐ │
+│  ┌───────────────────┬──────────────────────────────────┐ │
 │  │  TRAINING         │  GENERATION                       │ │
 │  │                   │                                   │ │
 │  │  ○ Live Recording │  Text Input:                      │ │
@@ -216,10 +302,10 @@ Or use the desktop shortcut created during installation.
 │  │  Processing...    │  Emotion: [Happy ▼]              │ │
 │  │                   │                                   │ │
 │  │  [View Details]   │  [Generate] [Preview] [Save]      │ │
-│  └───────────────────┴───────────────────────────────────┘ │
+│  └───────────────────┴──────────────────────────────────┘ │
 │                                                               │
 │  Model Quality: ★★★★☆ | Samples: 1,234 | Duration: 45m      │
-└─────────────────────────────────────────────────────────────┘
+└───────────────────────────────────────────────────────────┘
 ```
 
 ### Training Dashboard
@@ -246,7 +332,7 @@ training:
   batch_size: 32
   learning_rate: 0.0001
   epochs: 100
-  device: "cuda"  # or "cpu" or "mps" (Mac)
+  device: "auto"  # auto, cuda, cpu, mps (Mac)
   
 generation:
   default_speed: 1.0
@@ -266,7 +352,7 @@ api:
 Start the API server:
 
 ```bash
-python api_server.py
+python main.py --mode api
 ```
 
 ### Endpoints
@@ -368,7 +454,7 @@ VoiceClone-Studio/
 
 ### Models Used
 
-- **TTS Engine**: Based on XTTS v2 / Coqui TTS for voice synthesis
+- **TTS Engine**: Community-maintained Coqui TTS fork (Python 3.11/3.12 compatible)
 - **Voice Encoding**: Speaker encoder for voice characteristics
 - **Audio Processing**: PyTorch audio transforms and librosa
 - **Real-time Processing**: Streaming inference with optimized batch processing
@@ -434,7 +520,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 🙏 Acknowledgments
 
-- [Coqui TTS](https://github.com/coqui-ai/TTS) for the base TTS framework
+- [Coqui TTS Community Fork](https://github.com/idiap/coqui-ai-TTS) for Python 3.11/3.12 support
 - [OpenVoice](https://github.com/myshell-ai/OpenVoice) for voice cloning research
 - [Real-Time-Voice-Cloning](https://github.com/CorentinJ/Real-Time-Voice-Cloning) for inspiration
 - All contributors and the open-source community
@@ -446,7 +532,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - **Documentation**: [docs/](docs/)
 - **Issues**: [GitHub Issues](https://github.com/Fizzolas/VoiceClone-Studio/issues)
 - **Discussions**: [GitHub Discussions](https://github.com/Fizzolas/VoiceClone-Studio/discussions)
-- **Email**: support@voiceclone.studio (for security issues)
 
 ---
 
@@ -469,6 +554,15 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - [ ] Emotion fine-tuning
 - [ ] Voice aging/de-aging
 - [ ] Cloud training support
+
+---
+
+## ⚠️ Known Issues & Limitations
+
+- **Python 3.13+**: Not yet fully supported due to dependency constraints
+- **Original Coqui TTS**: The official package is unmaintained; this project uses community forks
+- **PyAudio**: May require manual installation of system libraries on some platforms
+- **CUDA Compatibility**: Ensure your CUDA drivers match the PyTorch version (12.1 or 12.4)
 
 ---
 
