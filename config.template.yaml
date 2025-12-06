@@ -1,0 +1,157 @@
+# VoiceClone Studio Configuration Template
+# Copy this file to config.yaml and customize as needed
+
+# Audio Settings
+audio:
+  sample_rate: 22050              # Sample rate in Hz (22050 or 44100 recommended)
+  channels: 1                     # Mono (1) or Stereo (2)
+  buffer_size: 1024               # Audio buffer size
+  chunk_duration: 0.5             # Recording chunk duration in seconds
+  silence_threshold: 0.01         # Amplitude threshold for silence detection (0.0-1.0)
+  silence_duration: 1.0           # Seconds of silence before auto-stopping
+  max_recording_duration: 3600    # Maximum recording duration in seconds (1 hour)
+  noise_reduction: true           # Enable noise reduction
+  auto_normalize: true            # Normalize audio levels automatically
+
+# Training Settings
+training:
+  # Hardware
+  device: "auto"                  # auto, cuda, cpu, mps (Mac M1/M2)
+  batch_size: 32                  # Training batch size (reduce if out of memory)
+  num_workers: 4                  # Data loader workers
+  use_mixed_precision: true       # Use FP16 for faster training (requires GPU)
+  
+  # Model Parameters
+  learning_rate: 0.0001           # Initial learning rate
+  epochs: 100                     # Maximum training epochs
+  early_stopping_patience: 10     # Stop if no improvement after N epochs
+  checkpoint_interval: 5          # Save checkpoint every N epochs
+  
+  # Data Processing
+  min_audio_length: 1.0           # Minimum audio clip length in seconds
+  max_audio_length: 10.0          # Maximum audio clip length in seconds
+  validation_split: 0.1           # Portion of data for validation (0.0-1.0)
+  augmentation: true              # Enable data augmentation
+  
+  # Real-time Training
+  realtime_enabled: true          # Enable real-time training mode
+  realtime_buffer_size: 100       # Number of audio chunks to buffer
+  realtime_update_interval: 10    # Update model every N chunks
+  background_processing: true     # Process audio in background thread
+
+# Voice Generation Settings
+generation:
+  # Quality
+  model_type: "xtts_v2"           # TTS model type
+  vocoder: "hifigan"              # Vocoder for audio generation
+  
+  # Defaults
+  default_speed: 1.0              # Speech speed (0.5-2.0)
+  default_pitch: 0                # Pitch shift in semitones (-12 to +12)
+  default_temperature: 0.7        # Sampling temperature (0.0-1.0)
+  default_emotion: "neutral"      # Default emotion (neutral, happy, sad, angry, etc.)
+  
+  # Performance
+  max_text_length: 1000           # Maximum characters per generation
+  streaming: true                 # Enable streaming generation
+  cache_generations: true         # Cache frequently generated phrases
+
+# Singing Mode Settings
+singing:
+  enabled: true                   # Enable singing mode
+  pitch_correction: true          # Auto-correct pitch
+  vibrato_strength: 0.3           # Vibrato effect strength (0.0-1.0)
+  breath_sounds: true             # Include breath sounds
+  supported_formats:              # MIDI file formats
+    - "mid"
+    - "midi"
+    - "musicxml"
+
+# GUI Settings
+gui:
+  theme: "dark"                   # dark or light
+  window_width: 1200              # Initial window width
+  window_height: 800              # Initial window height
+  font_size: 12                   # Base font size
+  show_waveform: true             # Display audio waveform
+  show_spectrogram: true          # Display spectrogram
+  auto_save: true                 # Auto-save settings on exit
+  language: "en"                  # Interface language (en, es, fr, de, zh, ja)
+
+# API Settings
+api:
+  enabled: true                   # Enable REST API server
+  host: "0.0.0.0"                 # API host (0.0.0.0 for all interfaces)
+  port: 8080                      # API port
+  cors_enabled: true              # Enable CORS
+  cors_origins:                   # Allowed CORS origins
+    - "*"
+  auth_required: false            # Require API authentication
+  api_key: ""                     # API key (if auth enabled)
+  rate_limit: 60                  # Requests per minute per IP
+  max_concurrent_requests: 10     # Maximum concurrent generation requests
+  
+  # Webhook Settings
+  webhooks_enabled: false         # Enable webhook notifications
+  webhook_url: ""                 # Webhook endpoint URL
+  webhook_events:                 # Events to send webhooks for
+    - "training_complete"
+    - "training_failed"
+    - "generation_complete"
+
+# AI Assistant Integration
+ai_assistant:
+  enabled: true                   # Enable AI conversation mode
+  provider: "openai"              # openai, anthropic, local, custom
+  model: "gpt-4"                  # Model name
+  api_key: ""                     # API key (if required)
+  endpoint: ""                    # Custom endpoint URL (if using custom provider)
+  
+  # Conversation Settings
+  auto_question: true             # Automatically ask questions during training
+  question_interval: 30           # Seconds between questions
+  conversation_topics:            # Topics for training conversations
+    - "general"
+    - "hobbies"
+    - "work"
+    - "news"
+  max_conversation_length: 50     # Maximum conversation turns
+
+# Logging Settings
+logging:
+  level: "INFO"                   # DEBUG, INFO, WARNING, ERROR, CRITICAL
+  file_logging: true              # Save logs to file
+  log_directory: "logs"           # Directory for log files
+  max_log_size: 10485760          # Max log file size in bytes (10MB)
+  backup_count: 5                 # Number of backup log files to keep
+  console_output: true            # Print logs to console
+
+# Model Storage
+models:
+  base_model_dir: "models/base"   # Directory for base pre-trained models
+  user_model_dir: "models/user"   # Directory for user-trained models
+  auto_download: true             # Automatically download missing models
+  model_cache_size: 5             # Number of models to keep in memory
+
+# Data Directories
+data:
+  recordings_dir: "data/recordings"   # Live recording storage
+  uploads_dir: "data/uploads"         # Uploaded audio files
+  cache_dir: "data/cache"             # Temporary cache
+  max_cache_size: 1073741824          # Max cache size in bytes (1GB)
+  auto_cleanup: true                  # Automatically clean old cache files
+  cleanup_days: 7                     # Delete cache files older than N days
+
+# Performance Settings
+performance:
+  max_memory_usage: 0.8           # Maximum RAM usage (0.0-1.0)
+  gpu_memory_fraction: 0.9        # GPU memory allocation (0.0-1.0)
+  num_threads: 4                  # CPU threads for processing
+  enable_profiling: false         # Enable performance profiling
+
+# Advanced Settings
+advanced:
+  debug_mode: false               # Enable debug mode
+  telemetry: true                 # Send anonymous usage statistics (helps improve the software)
+  auto_update_check: true         # Check for updates on startup
+  experimental_features: false    # Enable experimental features
