@@ -1,13 +1,7 @@
 # Core Dependencies
-# PyTorch - Install separately based on your system (see README.md)
-# Uncomment ONE of the following based on your hardware:
-# CPU only: pip install torch torchaudio
-# NVIDIA GPU (CUDA 12.4): pip install torch torchaudio --index-url https://download.pytorch.org/whl/cu124
-# NVIDIA GPU (CUDA 12.1): pip install torch torchaudio --index-url https://download.pytorch.org/whl/cu121
-# AMD GPU (ROCm 6.2): pip install torch torchaudio --index-url https://download.pytorch.org/whl/rocm6.2
-# macOS (CPU/Metal): pip install torch torchaudio
-
-numpy>=1.24.0,<2.0.0
+torch>=2.0.0
+torchaudio>=2.0.0
+numpy>=1.24.0
 scipy>=1.10.0
 
 # Audio Processing
@@ -19,15 +13,19 @@ resampy>=0.4.0
 noisereduce>=3.0.0
 
 # TTS and Voice Cloning
-# Note: Original Coqui TTS is unmaintained. Using community fork for Python 3.11+ support
-coqui-tts>=0.24.0  # Community-maintained fork with Python 3.11/3.12 support
+# NOTE: Using the maintained fork that supports Python 3.12+
+coqui-tts>=0.24.0  # Maintained fork with Python 3.12+ support
 transformers>=4.30.0
 sentencepiece>=0.1.99
-phonemizer>=3.2.0  # Note: Requires espeak-ng system package (see README)
+# phonemizer requires espeak-ng to be installed on your system
+# Windows: Download from https://github.com/espeak-ng/espeak-ng/releases
+# Linux: sudo apt-get install espeak-ng (Debian/Ubuntu) or sudo yum install espeak-ng (RedHat/CentOS)
+# macOS: brew install espeak-ng
+phonemizer>=3.2.0
 
 # GUI Framework
-PyQt6>=6.7.0
-PyQt6-WebEngine>=6.7.0
+PyQt6>=6.5.0
+PyQt6-WebEngine>=6.5.0
 pyqtgraph>=0.13.0
 
 # API Server
@@ -39,7 +37,7 @@ python-multipart>=0.0.6
 # Machine Learning
 scikit-learn>=1.3.0
 tensorboard>=2.13.0
-# wandb>=0.15.0  # Optional: Uncomment for experiment tracking
+# wandb>=0.15.0  # Optional: for experiment tracking - uncomment if needed
 
 # Data Processing
 pandas>=2.0.0
@@ -47,10 +45,14 @@ pyyaml>=6.0
 jsonschema>=4.18.0
 
 # Audio I/O
-# Note: PyAudio requires system-level PortAudio library (see README)
-# sounddevice is recommended as a more reliable alternative
-sounddevice>=0.4.6
-# pyaudio>=0.2.13  # Uncomment if you prefer PyAudio (requires portaudio19-dev)
+# PyAudio installation notes:
+# Windows: Use precompiled wheel - pip install pipwin && pipwin install pyaudio
+#          OR download .whl from https://www.lfd.uci.edu/~gohlke/pythonlibs/#pyaudio
+# Linux: Install portaudio19-dev first - sudo apt-get install portaudio19-dev python3-pyaudio
+# macOS: brew install portaudio && pip install pyaudio
+# Alternative: sounddevice (recommended for easier cross-platform installation)
+sounddevice>=0.4.6  # Recommended alternative to PyAudio
+# pyaudio>=0.2.13  # Uncomment if you prefer PyAudio over sounddevice
 
 # Utilities
 tqdm>=4.65.0
@@ -60,5 +62,16 @@ click>=8.1.0
 requests>=2.31.0
 
 # Model Optimization (Optional)
-# onnx>=1.14.0
-# onnxruntime>=1.15.0
+onnx>=1.14.0
+onnxruntime>=1.15.0
+
+# GPU Acceleration (Optional - see install scripts for automatic detection)
+# For NVIDIA GPUs, install separately based on your CUDA version:
+# CUDA 12.6 (recommended for latest GPUs): pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu126
+# CUDA 11.8 (for older drivers): pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
+# CPU only: pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
+
+# For AMD GPUs with ROCm:
+# pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/rocm6.0
+
+# macOS Metal acceleration is included in standard PyTorch installation

@@ -11,46 +11,37 @@ REM Check if Python is installed
 python --version >nul 2>&1
 if errorlevel 1 (
     echo ERROR: Python is not installed or not in PATH
-    echo Please install Python 3.10, 3.11, or 3.12 from python.org
-    echo Download from: https://www.python.org/downloads/
+    echo Please install Python 3.10 or higher from python.org
     pause
     exit /b 1
 )
 
 echo Checking Python version...
-for /f "tokens=2" %%I in ('python --version') do set PYTHON_VERSION=%%I
-echo Found Python %PYTHON_VERSION%
-
-python -c "import sys; exit(0 if (3, 10) <= sys.version_info[:2] <= (3, 12) else 1)"
+python -c "import sys; exit(0 if sys.version_info >= (3, 10) else 1)"
 if errorlevel 1 (
-    echo ERROR: Python 3.10, 3.11, or 3.12 is required
-    echo Python 3.13+ is not yet fully supported by all dependencies
-    echo Current version: %PYTHON_VERSION%
-    echo.
-    echo Please install Python 3.10, 3.11, or 3.12 from:
-    echo https://www.python.org/downloads/
+    echo ERROR: Python 3.10 or higher is required
+    echo Current version:
+    python --version
     pause
     exit /b 1
 )
 
-echo Python version OK: %PYTHON_VERSION%
+echo Python version OK
 echo.
 
 REM Create virtual environment
 echo Creating virtual environment...
 if exist venv (
     echo Virtual environment already exists
-    echo Deleting old virtual environment...
-    rmdir /s /q venv
+) else (
+    python -m venv venv
+    if errorlevel 1 (
+        echo ERROR: Failed to create virtual environment
+        pause
+        exit /b 1
+    )
+    echo Virtual environment created
 )
-
-python -m venv venv
-if errorlevel 1 (
-    echo ERROR: Failed to create virtual environment
-    pause
-    exit /b 1
-)
-echo Virtual environment created
 echo.
 
 REM Activate virtual environment
@@ -64,71 +55,79 @@ if errorlevel 1 (
 echo.
 
 REM Upgrade pip
-echo Upgrading pip, setuptools, and wheel...
-python -m pip install --upgrade pip setuptools wheel
+echo Upgrading pip...
+python -m pip install --upgrade pip
 echo.
 
-REM Detect GPU and install PyTorch
-echo ========================================
-echo Detecting GPU for PyTorch installation...
-echo ========================================
-echo.
-
+REM Install PyTorch (CUDA version if available)
+echo Detecting GPU...
 nvidia-smi >nul 2>&1
 if errorlevel 1 (
-    echo No NVIDIA GPU detected
-    echo Installing CPU-only version of PyTorch...
-    echo.
-    pip install torch torchaudio
+    echo No NVIDIA GPU detected, installing CPU version of PyTorch
+    pip install torch torchaudio --index-url https://download.pytorch.org/whl/cpu
 ) else (
-    echo NVIDIA GPU detected!
-    echo.
-    echo Select PyTorch CUDA version:
-    echo   1. CUDA 12.4 (Recommended for RTX 40-series and newer)
-    echo   2. CUDA 12.1 (For older RTX 30-series GPUs)
-    echo   3. CPU only (No GPU acceleration)
-    echo.
-    set /p CUDA_CHOICE="Enter choice (1-3) [default: 1]: "
-    
-    if "%CUDA_CHOICE%"=="" set CUDA_CHOICE=1
-    if "%CUDA_CHOICE%"=="3" (
-        echo Installing CPU-only PyTorch...
-        pip install torch torchaudio
-    ) else if "%CUDA_CHOICE%"=="2" (
-        echo Installing PyTorch with CUDA 12.1...
-        pip install torch torchaudio --index-url https://download.pytorch.org/whl/cu121
-    ) else (
-        echo Installing PyTorch with CUDA 12.4 (default)...
-        pip install torch torchaudio --index-url https://download.pytorch.org/whl/cu124
-    )
+    echo NVIDIA GPU detected, installing CUDA 12.6 version of PyTorch
+    echo Note: This requires NVIDIA driver 525.60.13 or newer
+    pip install torch torchaudio --index-url https://download.pytorch.org/whl/cu126
 )
+echo.
 
+REM Install espeak-ng (required for phonemizer)
+echo.
+echo ========================================
+echo IMPORTANT: espeak-ng Installation
+echo ========================================
+echo.
+echo espeak-ng is required for voice cloning to work.
+echo.
+echo Please download and install espeak-ng from:
+echo https://github.com/espeak-ng/espeak-ng/releases
+echo.
+echo Download: espeak-ng-X64.msi (for 64-bit Windows)
+echo.
+echo After installation, you may need to add it to your PATH:
+echo C:\Program Files\eSpeak NG\
+echo.
+set /p "ESPEAK_INSTALLED=Have you installed espeak-ng? (y/n): "
+if /i "%ESPEAK_INSTALLED%" neq "y" (
+    echo.
+    echo WARNING: Continuing without espeak-ng may cause errors.
+    echo You can install it later and re-run this script.
+    echo.
+)
+echo.
+
+REM Install pipwin for easier PyAudio installation
+echo Installing pipwin for PyAudio...
+pip install pipwin
+echo.
+
+REM Try to install PyAudio via pipwin
+echo Installing PyAudio...
+pipwin install pyaudio
 if errorlevel 1 (
-    echo ERROR: Failed to install PyTorch
-    echo Please check your internet connection and try again
-    pause
-    exit /b 1
+    echo.
+    echo PyAudio installation via pipwin failed.
+    echo Will use sounddevice as alternative (already in requirements.txt)
+    echo.
+    echo If you want PyAudio specifically, download the wheel file from:
+    echo https://www.lfd.uci.edu/~gohlke/pythonlibs/#pyaudio
+    echo Then install with: pip install downloaded_file.whl
+    echo.
 )
 echo.
 
 REM Install other dependencies
-echo ========================================
 echo Installing remaining dependencies...
-echo This may take several minutes...
-echo ========================================
-echo.
-
 pip install -r requirements.txt
 if errorlevel 1 (
+    echo ERROR: Failed to install dependencies
     echo.
-    echo WARNING: Some packages failed to install
     echo Common issues:
-    echo   - PyAudio requires Microsoft Visual C++ Build Tools
-    echo   - phonemizer requires espeak-ng (download from: https://github.com/espeak-ng/espeak-ng/releases)
-    echo.
-    echo The application may still work with sounddevice instead of PyAudio
-    echo.
+    echo - If Coqui TTS fails: Try pip install coqui-tts --no-deps then pip install -r requirements.txt
+    echo - If phonemizer fails: Make sure espeak-ng is installed and in PATH
     pause
+    exit /b 1
 )
 echo.
 
@@ -142,7 +141,6 @@ if not exist "models\user" mkdir "models\user"
 if not exist "logs" mkdir "logs"
 if not exist "src" mkdir "src"
 if not exist "scripts" mkdir "scripts"
-echo Directory structure created
 echo.
 
 REM Copy configuration template
@@ -151,54 +149,55 @@ if not exist "config.yaml" (
     copy config.template.yaml config.yaml
     echo Created config.yaml from template
 ) else (
-    echo config.yaml already exists - skipping
+    echo config.yaml already exists
 )
 echo.
 
-REM Create placeholder for download_models.py if it doesn't exist
+REM Create placeholder scripts if they don't exist
 if not exist "scripts\download_models.py" (
-    echo Creating placeholder download_models.py script...
+    echo Creating placeholder download_models.py...
     (
-        echo # Model Download Script
-        echo # This script will download pre-trained base models
-        echo print^("Model download not yet implemented"^)
-        echo print^("Models will be downloaded automatically on first run"^)
+        echo # Placeholder for model download script
+        echo print("Model download functionality coming soon!"^)
+        echo print("Models will be downloaded on first use."^)
     ) > scripts\download_models.py
 )
 
-REM Download base models (if script exists)
-echo.
-echo Note: Base models will be downloaded automatically on first use
-echo to save installation time and bandwidth.
-echo.
-
-REM Verify installation
-echo ========================================
-echo Verifying installation...
-echo ========================================
-echo.
-
-python -c "import torch; print('PyTorch:', torch.__version__); print('CUDA available:', torch.cuda.is_available())"
-python -c "import PyQt6; print('PyQt6: OK')"
-python -c "import sounddevice; print('sounddevice: OK')"
+if not exist "scripts\create_shortcut.py" (
+    echo Creating placeholder create_shortcut.py...
+    (
+        echo # Placeholder for shortcut creation
+        echo print("Desktop shortcut creation - optional feature"^)
+    ) > scripts\create_shortcut.py
+)
 
 echo.
+echo Downloading base models...
+python scripts\download_models.py
+echo.
+
+echo Creating desktop shortcut...
+python scripts\create_shortcut.py
+echo.
+
 echo ========================================
 echo Installation Complete!
 echo ========================================
 echo.
-echo To run VoiceClone Studio:
-echo   1. Activate virtual environment:
- echo      venv\Scripts\activate.bat
-echo   2. Run the application:
-echo      python main.py
-echo.
-echo For API mode: python main.py --mode api
-echo For CLI help: python main.py --mode cli --help
-echo.
 echo IMPORTANT NOTES:
-echo - If you encounter audio issues, install espeak-ng from:
-echo   https://github.com/espeak-ng/espeak-ng/releases
-echo - For PyAudio support, install Microsoft Visual C++ Build Tools
+echo 1. Make sure espeak-ng is installed from:
+echo    https://github.com/espeak-ng/espeak-ng/releases
+echo.
+echo 2. To run VoiceClone Studio:
+echo    - Double-click the desktop shortcut, OR
+echo    - Run: venv\Scripts\activate.bat
+echo            python main.py
+echo.
+echo 3. For API mode: python main.py --mode api
+echo 4. For CLI mode: python main.py --mode cli --help
+echo.
+echo 5. If you encounter "espeak-ng not found" errors:
+echo    - Add C:\Program Files\eSpeak NG\ to your PATH
+echo    - OR set PHONEMIZER_ESPEAK_LIBRARY environment variable
 echo.
 pause
