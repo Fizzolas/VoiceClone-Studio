@@ -1,7 +1,9 @@
 # Core Dependencies
+# NOTE: This file requires Python 3.10, 3.11, or 3.12
+# Python 3.13+ is NOT supported by coqui-tts
 torch>=2.0.0
 torchaudio>=2.0.0
-numpy>=1.24.0
+numpy>=1.24.0,<3.0.0  # NumPy 2.x has compatibility issues with some audio libraries
 scipy>=1.10.0
 
 # Audio Processing
@@ -13,8 +15,9 @@ resampy>=0.4.0
 noisereduce>=3.0.0
 
 # TTS and Voice Cloning
-# NOTE: Using the maintained fork that supports Python 3.12+
-coqui-tts>=0.24.0  # Maintained fork with Python 3.12+ support
+# NOTE: coqui-tts requires Python <3.13
+# The package supports Python 3.10-3.12 only
+coqui-tts>=0.24.0; python_version<'3.13'
 transformers>=4.30.0
 sentencepiece>=0.1.99
 # phonemizer requires espeak-ng to be installed on your system
@@ -46,11 +49,10 @@ jsonschema>=4.18.0
 
 # Audio I/O
 # PyAudio installation notes:
-# Windows: Use precompiled wheel - pip install pipwin && pipwin install pyaudio
-#          OR download .whl from https://www.lfd.uci.edu/~gohlke/pythonlibs/#pyaudio
+# Windows: Not recommended - use sounddevice instead
 # Linux: Install portaudio19-dev first - sudo apt-get install portaudio19-dev python3-pyaudio
 # macOS: brew install portaudio && pip install pyaudio
-# Alternative: sounddevice (recommended for easier cross-platform installation)
+# Recommended: sounddevice (easier cross-platform installation)
 sounddevice>=0.4.6  # Recommended alternative to PyAudio
 # pyaudio>=0.2.13  # Uncomment if you prefer PyAudio over sounddevice
 

@@ -37,6 +37,37 @@ def setup_logging(level: str = "INFO", log_file: bool = True) -> None:
     )
 
 
+def check_python_version() -> bool:
+    """Check if Python version is compatible."""
+    version_info = sys.version_info
+    
+    if version_info.major != 3:
+        logging.error(f"Python 3 required, but running Python {version_info.major}")
+        return False
+    
+    if version_info.minor < 10:
+        logging.error(
+            f"Python 3.10+ required, but running Python {version_info.major}.{version_info.minor}"
+        )
+        logging.error("Please install Python 3.10, 3.11, or 3.12")
+        return False
+    
+    if version_info.minor >= 13:
+        logging.error(
+            f"Python 3.13+ is not supported (running Python {version_info.major}.{version_info.minor})"
+        )
+        logging.error("The coqui-tts library does not support Python 3.13+")
+        logging.error("Please install Python 3.10, 3.11, or 3.12")
+        logging.error("\nTo fix:")
+        logging.error("  1. Install Python 3.11: winget install -e --id Python.Python.3.11")
+        logging.error("  2. Delete existing venv: rmdir /s /q venv")
+        logging.error("  3. Create new venv: py -3.11 -m venv venv")
+        logging.error("  4. Run installer: install.bat")
+        return False
+    
+    return True
+
+
 def check_dependencies() -> bool:
     """Check if all required dependencies are installed."""
     required_packages = [
@@ -45,15 +76,28 @@ def check_dependencies() -> bool:
         "PyQt6",
         "librosa",
         "soundfile",
-        "TTS",
+        ("TTS", "coqui-tts"),  # Either package name works
     ]
     
     missing_packages = []
     for package in required_packages:
-        try:
-            __import__(package)
-        except ImportError:
-            missing_packages.append(package)
+        if isinstance(package, tuple):
+            # Try multiple package names
+            found = False
+            for pkg_name in package:
+                try:
+                    __import__(pkg_name)
+                    found = True
+                    break
+                except ImportError:
+                    continue
+            if not found:
+                missing_packages.append(package[0])
+        else:
+            try:
+                __import__(package)
+            except ImportError:
+                missing_packages.append(package)
     
     if missing_packages:
         logging.error(f"Missing required packages: {', '.join(missing_packages)}")
@@ -66,17 +110,40 @@ def check_dependencies() -> bool:
 def run_gui() -> int:
     """Launch the GUI application."""
     try:
-        from PyQt6.QtWidgets import QApplication
-        from gui.main_window import MainWindow
+        from PyQt6.QtWidgets import QApplication, QMessageBox
         
         app = QApplication(sys.argv)
         app.setApplicationName("VoiceClone Studio")
         app.setOrganizationName("VoiceClone Studio")
         
-        window = MainWindow()
-        window.show()
-        
-        return app.exec()
+        # Try to import main window
+        try:
+            from gui.main_window import MainWindow
+            window = MainWindow()
+            window.show()
+            return app.exec()
+        except ImportError:
+            # GUI not implemented yet - show message
+            msg = QMessageBox()
+            msg.setIcon(QMessageBox.Icon.Information)
+            msg.setWindowTitle("VoiceClone Studio - Alpha Version")
+            msg.setText("GUI Not Yet Implemented")
+            msg.setInformativeText(
+                "VoiceClone Studio v0.1.0-alpha\n\n"
+                "The graphical user interface is currently under development.\n\n"
+                "The GUI will be available in v0.2.0 (Q1 2026).\n\n"
+                "Current status:\n"
+                "• ✅ Installation and dependencies\n"
+                "• ✅ Project structure and documentation\n"
+                "• 🚧 GUI implementation (coming soon)\n"
+                "• 🚧 Voice training pipeline (coming soon)\n"
+                "• 🚧 Voice generation (coming soon)\n\n"
+                "For updates, visit:\n"
+                "https://github.com/Fizzolas/VoiceClone-Studio"
+            )
+            msg.setStandardButtons(QMessageBox.StandardButton.Ok)
+            msg.exec()
+            return 0
     
     except Exception as e:
         logging.exception(f"Failed to start GUI: {e}")
@@ -113,6 +180,9 @@ def run_cli(args: argparse.Namespace) -> int:
             logging.error(f"Unknown command: {args.command}")
             return 1
     
+    except ImportError:
+        logging.error("CLI functionality not yet implemented (coming in v0.2.0)")
+        return 1
     except Exception as e:
         logging.exception(f"CLI error: {e}")
         return 1
@@ -127,6 +197,9 @@ def run_api(host: str = "0.0.0.0", port: int = 8080) -> int:
         start_server(host=host, port=port)
         return 0
     
+    except ImportError:
+        logging.error("API functionality not yet implemented (coming in v0.3.0)")
+        return 1
     except Exception as e:
         logging.exception(f"Failed to start API server: {e}")
         return 1
@@ -197,8 +270,15 @@ def main() -> int:
     # Setup logging
     setup_logging(level=args.log_level, log_file=not args.no_log_file)
     
-    logging.info("Starting VoiceClone Studio")
+    logging.info("="*50)
+    logging.info("VoiceClone Studio v0.1.0-alpha")
+    logging.info("="*50)
+    logging.info(f"Python version: {sys.version}")
     logging.info(f"Mode: {args.mode}")
+    
+    # Check Python version
+    if not check_python_version():
+        return 1
     
     # Check dependencies
     if not check_dependencies():
