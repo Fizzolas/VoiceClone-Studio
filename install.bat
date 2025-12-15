@@ -1,5 +1,5 @@
 @echo off
-REM VoiceClone Studio - Windows Installation Script
+REM VoiceClone-Studio - Windows Installation Script
 REM This script installs all dependencies and sets up the application
 
 echo ========================================
@@ -11,17 +11,39 @@ REM Check if Python is installed
 python --version >nul 2>&1
 if errorlevel 1 (
     echo ERROR: Python is not installed or not in PATH
-    echo Please install Python 3.10 or higher from python.org
+    echo Please install Python 3.10, 3.11, or 3.12 from python.org
     pause
     exit /b 1
 )
 
 echo Checking Python version...
-python -c "import sys; exit(0 if sys.version_info >= (3, 10) else 1)"
+
+REM Get Python version and check compatibility
+python -c "import sys; v = sys.version_info; exit(0 if (v.major == 3 and 10 <= v.minor <= 12) else 1)"
 if errorlevel 1 (
-    echo ERROR: Python 3.10 or higher is required
-    echo Current version:
+    echo.
+    echo ================================================
+    echo ERROR: Incompatible Python Version
+    echo ================================================
+    echo.
+    echo Current Python version:
     python --version
+    echo.
+    echo REQUIRED: Python 3.10, 3.11, or 3.12
+    echo NOT SUPPORTED: Python 3.13, 3.14, or 3.9 and below
+    echo.
+    echo Why? The coqui-tts library does not support Python 3.13+
+    echo.
+    echo SOLUTIONS:
+    echo   1. Install Python 3.11 (recommended):
+    echo      winget install -e --id Python.Python.3.11 --scope machine
+    echo.
+    echo   2. Install Python 3.12:
+    echo      winget install -e --id Python.Python.3.12 --scope machine
+    echo.
+    echo   3. After installing, create a new venv with specific version:
+    echo      py -3.11 -m venv venv
+    echo.
     pause
     exit /b 1
 )
@@ -97,35 +119,34 @@ if /i "%ESPEAK_INSTALLED%" neq "y" (
 )
 echo.
 
-REM Install pipwin for easier PyAudio installation
-echo Installing pipwin for PyAudio...
-pip install pipwin
-echo.
-
-REM Try to install PyAudio via pipwin
-echo Installing PyAudio...
-pipwin install pyaudio
-if errorlevel 1 (
-    echo.
-    echo PyAudio installation via pipwin failed.
-    echo Will use sounddevice as alternative (already in requirements.txt)
-    echo.
-    echo If you want PyAudio specifically, download the wheel file from:
-    echo https://www.lfd.uci.edu/~gohlke/pythonlibs/#pyaudio
-    echo Then install with: pip install downloaded_file.whl
-    echo.
-)
+REM Skip pipwin entirely - it's broken on Python 3.14 and unreliable
+echo NOTE: Skipping PyAudio installation (use sounddevice instead)
+echo PyAudio is optional. If you need it, download from:
+echo https://www.lfd.uci.edu/~gohlke/pythonlibs/#pyaudio
+echo Then install with: pip install downloaded_file.whl
 echo.
 
 REM Install other dependencies
-echo Installing remaining dependencies...
+echo Installing dependencies...
 pip install -r requirements.txt
 if errorlevel 1 (
+    echo.
+    echo ========================================
     echo ERROR: Failed to install dependencies
+    echo ========================================
     echo.
     echo Common issues:
-    echo - If Coqui TTS fails: Try pip install coqui-tts --no-deps then pip install -r requirements.txt
-    echo - If phonemizer fails: Make sure espeak-ng is installed and in PATH
+    echo   1. Python 3.13/3.14: Not supported by coqui-tts
+    echo      Solution: Use Python 3.10, 3.11, or 3.12
+    echo.
+    echo   2. espeak-ng not found: phonemizer will fail
+    echo      Solution: Install espeak-ng and add to PATH
+    echo.
+    echo   3. Network issues: Unable to download packages
+    echo      Solution: Check internet connection
+    echo.
+    echo For more help, see TROUBLESHOOTING.md
+    echo.
     pause
     exit /b 1
 )
@@ -140,7 +161,22 @@ if not exist "models\base" mkdir "models\base"
 if not exist "models\user" mkdir "models\user"
 if not exist "logs" mkdir "logs"
 if not exist "src" mkdir "src"
+if not exist "src\gui" mkdir "src\gui"
+if not exist "src\models" mkdir "src\models"
+if not exist "src\audio" mkdir "src\audio"
+if not exist "src\api" mkdir "src\api"
+if not exist "src\utils" mkdir "src\utils"
 if not exist "scripts" mkdir "scripts"
+echo.
+
+REM Create __init__.py files for Python modules
+echo Creating Python module structure...
+type nul > src\__init__.py
+type nul > src\gui\__init__.py
+type nul > src\models\__init__.py
+type nul > src\audio\__init__.py
+type nul > src\api\__init__.py
+type nul > src\utils\__init__.py
 echo.
 
 REM Copy configuration template
@@ -188,16 +224,22 @@ echo IMPORTANT NOTES:
 echo 1. Make sure espeak-ng is installed from:
 echo    https://github.com/espeak-ng/espeak-ng/releases
 echo.
-echo 2. To run VoiceClone Studio:
-echo    - Double-click the desktop shortcut, OR
-echo    - Run: venv\Scripts\activate.bat
-echo            python main.py
+echo 2. Your Python version:
+python --version
+echo    (Must be 3.10, 3.11, or 3.12)
 echo.
-echo 3. For API mode: python main.py --mode api
-echo 4. For CLI mode: python main.py --mode cli --help
+echo 3. To run VoiceClone Studio:
+echo    venv\Scripts\activate.bat
+echo    python main.py
 echo.
-echo 5. If you encounter "espeak-ng not found" errors:
+echo 4. For API mode: python main.py --mode api
+echo 5. For CLI mode: python main.py --mode cli --help
+echo.
+echo 6. If you encounter "espeak-ng not found" errors:
 echo    - Add C:\Program Files\eSpeak NG\ to your PATH
 echo    - OR set PHONEMIZER_ESPEAK_LIBRARY environment variable
+echo.
+echo NOTE: The GUI is not yet implemented (coming in v0.2.0)
+echo       The application will show an error - this is expected.
 echo.
 pause
